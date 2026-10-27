@@ -1,0 +1,307 @@
+
+clc;
+clear;
+close all;
+
+%% =========================================================
+%  ROAD TRAFFIC CONGESTION ASSESSMENT SYSTEM
+%  MATLAB Hackathon Project
+% Demo using sample traffic data
+%% =========================================================
+
+%% STEP 1: INPUT TRAFFIC DATA
+
+roadNames = {'Road A', 'Road B', 'Road C', ...
+             'Road D', 'Road E'};
+
+% Vehicles counted during a 15-minute period
+vehicleCount = [20 45 70 95 120];
+
+% Average vehicle speed in km/h
+averageSpeed = [50 40 28 15 8];
+
+% Road capacity: vehicles per 15-minute period
+roadCapacity = [100 100 100 100 100];
+
+% Traffic deman
+% d multiplier
+% 1.0 = normal demand, above 1.0 = increased demand
+demandMultiplier = [0.5 0.8 1.0 1.2 1.5];
+
+% Expected free-flow speed in km/h
+freeFlowSpeed = [60 60 60 60 60];
+
+numberOfRoads = length(roadNames);
+
+%% STEP 2: CALCULATE CAPACITY UTILIZATION
+
+capacityUtilization = vehicleCount ./ roadCapacity;
+
+% Limit normalized capacity score to 0-1
+capacityScore = min(capacityUtilization, 1);
+
+%% STEP 3: CALCULATE SPEED REDUCTION
+
+speedReduction = 1 - ...
+    (averageSpeed ./ freeFlowSpeed);
+
+speedReduction = max(0, min(1, speedReduction));
+
+%% STEP 4: CALCULATE TRAFFIC DEMAND PRESSURE
+
+demandPressure = max(demandMultiplier - 1, 0);
+
+% Normalize demand pressure to 0-1
+demandScore = min(demandPressure, 1);
+
+%% STEP 5: CALCULATE CONGESTION SCORE
+
+% Weights: capacity 40%, speed 40%, demand 20%
+
+congestionScore = 100 * ( ...
+    0.40 * capacityScore + ...
+    0.40 * speedReduction + ...
+    0.20 * demandScore);
+
+congestionScore = max(0, min(100, congestionScore));
+
+%% STEP 6: CLASSIFY CONGESTION LEVEL
+
+congestionStatus = cell(1, numberOfRoads);
+
+for i = 1:numberOfRoads
+
+    if congestionScore(i) < 25
+        congestionStatus{i} = 'Low';
+
+    elseif congestionScore(i) < 50
+        congestionStatus{i} = 'Moderate';
+
+    elseif congestionScore(i) < 75
+        congestionStatus{i} = 'High';
+
+    else
+        congestionStatus{i} = 'Severe';
+    end
+
+end
+
+%% STEP 7: DISPLAY COMPLETE RESULTS TABLE
+
+results = table( ...
+    roadNames', ...
+    vehicleCount', ...
+    averageSpeed', ...
+    roadCapacity', ...
+    demandMultiplier', ...
+    capacityUtilization' * 100, ...
+    congestionScore', ...
+    congestionStatus', ...
+    'VariableNames', { ...
+    'Road', ...
+    'VehicleCount', ...
+    'AverageSpeed_kmh', ...
+    'RoadCapacity', ...
+    'DemandMultiplier', ...
+    'CapacityUtilization_pct', ...
+    'CongestionScore', ...
+    'CongestionStatus'});
+
+fprintf('\n====================================\n');
+fprintf(' ROAD TRAFFIC CONGESTION ASSESSMENT\n');
+fprintf('====================================\n\n');
+
+disp(results);
+
+%% STEP 8: CONGESTION SCORE GRAPH
+
+figure('Name', 'Congestion Score Comparison');
+
+bar(congestionScore);
+
+xticks(1:numberOfRoads);
+xticklabels(roadNames);
+
+xlabel('Road Segments');
+ylabel('Congestion Score (0-100)');
+title('Road-wise Congestion Assessment');
+
+ylim([0 100]);
+grid on;
+
+%% STEP 9: AVERAGE SPEED GRAPH
+
+figure('Name', 'Average Vehicle Speed');
+
+bar(averageSpeed);
+
+xticks(1:numberOfRoads);
+xticklabels(roadNames);
+
+xlabel('Road Segments');
+ylabel('Average Speed (km/h)');
+title('Average Speed Comparison');
+
+grid on;
+
+%% STEP 10: ROAD CAPACITY ALERTS
+
+fprintf('\n========== CAPACITY ALERTS ==========\n');
+
+for i = 1:numberOfRoads
+
+    if capacityUtilization(i) > 1
+        fprintf('WARNING: %s is OVER CAPACITY.\n', ...
+            roadNames{i});
+
+    elseif capacityUtilization(i) >= 0.80
+        fprintf('ALERT: %s is approaching capacity.\n', ...
+            roadNames{i});
+
+    else
+        fprintf('OK: %s has available capacity.\n', ...
+            roadNames{i});
+    end
+
+end
+
+%% STEP 11: TRAFFIC STATISTICS
+
+fprintf('\n========== TRAFFIC STATISTICS ==========\n');
+
+fprintf('Total vehicles counted: %d\n', ...
+    sum(vehicleCount));
+
+fprintf('Average vehicle speed: %.2f km/h\n', ...
+    mean(averageSpeed));
+
+fprintf('Average congestion score: %.2f / 100\n', ...
+    mean(congestionScore));
+
+[maxScore, worstIndex] = max(congestionScore);
+
+fprintf('Most congested road: %s\n', ...
+    roadNames{worstIndex});
+
+fprintf('Highest congestion score: %.2f / 100\n', ...
+    maxScore);
+
+fprintf('Congestion category: %s\n', ...
+    congestionStatus{worstIndex});
+
+%% STEP 12: TRAFFIC MANAGEMENT SUGGESTIONS
+
+fprintf('\n========== RECOMMENDATIONS ==========\n');
+
+for i = 1:numberOfRoads
+
+    fprintf('\n%s: ', roadNames{i});
+
+    if strcmp(congestionStatus{i}, 'Severe')
+
+        fprintf(['Severe congestion. Review signal timing, ' ...
+            'traffic diversion and possible incidents.\n']);
+
+    elseif strcmp(congestionStatus{i}, 'High')
+
+        fprintf(['High congestion. Monitor vehicle flow and ' ...
+            'consider signal timing adjustments.\n']);
+
+    elseif strcmp(congestionStatus{i}, 'Moderate')
+
+        fprintf(['Moderate congestion. Continue monitoring ' ...
+            'traffic speed and demand.\n']);
+
+    else
+
+        fprintf('Traffic flow is relatively normal.\n');
+
+    end
+
+end
+
+%% STEP 13: CONGESTION HEATMAP
+
+heatmapData = [
+    capacityUtilization * 100;
+    speedReduction * 100;
+    demandScore * 100;
+    congestionScore
+];
+
+figure('Name', 'Traffic Congestion Heatmap');
+
+imagesc(heatmapData);
+
+colorbar;
+caxis([0 100]);
+
+xticks(1:numberOfRoads);
+xticklabels(roadNames);
+
+yticks(1:4);
+yticklabels({ ...
+    'Capacity Utilization (%)', ...
+    'Speed Reduction (%)', ...
+    'Demand Pressure (%)', ...
+    'Congestion Score'});
+
+xlabel('Road Segments');
+title('Traffic Congestion Heatmap');
+
+%% STEP 14: SIMULATE PEAK-HOUR TRAFFIC
+
+% Hypothetical scenario:
+% Vehicle counts increase by 25%
+% Average speeds decrease by 25%
+% Demand multipliers increase by 50%
+
+peakVehicleCount = vehicleCount * 1.25;
+peakSpeed = averageSpeed * 0.75;
+peakDemand = demandMultiplier * 1.5;
+
+peakUtilization = peakVehicleCount ./ roadCapacity;
+peakCapacityScore = min(peakUtilization, 1);
+
+peakSpeedReduction = 1 - ...
+    (peakSpeed ./ freeFlowSpeed);
+
+peakSpeedReduction = max(0, min(1, peakSpeedReduction));
+
+peakDemandScore = min(max(peakDemand - 1, 0), 1);
+
+peakScore = 100 * ( ...
+    0.40 * peakCapacityScore + ...
+    0.40 * peakSpeedReduction + ...
+    0.20 * peakDemandScore);
+
+peakScore = max(0, min(100, peakScore));
+
+%% STEP 15: COMPARE NORMAL AND PEAK TRAFFIC
+
+figure('Name', 'Normal vs Peak Traffic');
+
+bar([congestionScore(:), peakScore(:)]);
+
+xticks(1:numberOfRoads);
+xticklabels(roadNames);
+
+xlabel('Road Segments');
+ylabel('Congestion Score (0-100)');
+
+title('Normal Traffic vs Simulated Peak Traffic');
+
+legend('Sample Traffic', 'Peak Traffic Scenario');
+
+ylim([0 100]);
+grid on;
+
+%% STEP 16: EXPORT RESULTS TO CSV
+
+writetable(results, 'traffic_assessment_results.csv');
+
+fprintf('\nResults exported to traffic_assessment_results.csv\n');
+
+fprintf('\n====================================\n');
+fprintf(' TRAFFIC ASSESSMENT COMPLETED\n');
+fprintf('====================================\n');
